@@ -19,7 +19,8 @@ function App() {
             });
             setWeatherData(response.data);
         } catch (err) {
-            setError(err.response?.data?.message || 'Erro ao buscar dados meteorológicos');
+            console.error('Erro ao buscar dados:', err);
+            setError(err.response?.data?.message || err.message || 'Erro ao buscar dados meteorológicos');
             setWeatherData(null);
         } finally {
             setLoading(false);
@@ -28,6 +29,7 @@ function App() {
 
     useEffect(() => {
         fetchWeather();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleCityChange = (newCity) => {
