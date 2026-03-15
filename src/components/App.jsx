@@ -4,7 +4,7 @@ import WeatherCard from './WeatherCard';
 import CitySearch from './CitySearch';
 
 function App() {
-    const [city, setCity] = useState('Lisboa');
+    const [city, setCity] = useState('Esmoriz');
     const [weatherData, setWeatherData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);

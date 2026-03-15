@@ -1,6 +1,6 @@
 // Vercel Serverless Function para busca de cidades
 const PORTUGUESE_CITIES = [
-    'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Évora', 'Aveiro', 'Setúbal',
+    'Esmoriz', 'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Évora', 'Aveiro', 'Setúbal',
     'Viseu', 'Leiria', 'Funchal', 'Ponta Delgada', 'Vila Nova de Gaia', 'Guimarães',
     'Santarém', 'Bragança', 'Beja', 'Portalegre', 'Viana do Castelo', 'Vila Real',
     'Castelo Branco', 'Angra do Heroísmo', 'Horta', 'Cascais', 'Sintra', 'Almada',

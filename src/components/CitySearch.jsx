@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Lista de cidades principais de Portugal para busca rápida local
 const PORTUGUESE_CITIES = [
-    'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Évora', 'Aveiro', 'Setúbal',
+    'Esmoriz', 'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Évora', 'Aveiro', 'Setúbal',
     'Viseu', 'Leiria', 'Funchal', 'Ponta Delgada', 'Vila Nova de Gaia', 'Guimarães',
     'Santarém', 'Bragança', 'Beja', 'Portalegre', 'Viana do Castelo', 'Vila Real',
     'Castelo Branco', 'Angra do Heroísmo', 'Horta', 'Cascais', 'Sintra', 'Almada',
@@ -146,7 +146,7 @@ function CitySearch({ onCitySelect, currentCity, forecastDays, onForecastDaysCha
                                 setTimeout(() => setShowSuggestions(false), 200);
                             }}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="Digite o nome da cidade (ex: Lisboa, Porto)..."
+                            placeholder="Digite o nome da cidade (ex: Esmoriz, Lisboa, Porto)..."
                         />
                         {loading && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
