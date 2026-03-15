@@ -1,15 +1,23 @@
 // Vercel Serverless Function para previsão do tempo
 export default async function handler(req, res) {
-    // Suportar tanto GET quanto POST
-    const method = req.method || 'GET';
-    
-    if (method !== 'GET') {
+    // Configurar CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     // Extrair parâmetros da URL
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const city = url.pathname.split('/').pop() || url.searchParams.get('city');
+    // Para Vercel: req.url contém o path completo
+    const url = new URL(req.url || '/', `https://${req.headers.host || 'localhost'}`);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const city = pathParts[pathParts.length - 1] || url.searchParams.get('city');
     const days = Math.min(Math.max(parseInt(url.searchParams.get('days')) || 5, 1), 7);
 
     if (!city) {
@@ -223,7 +231,7 @@ export default async function handler(req, res) {
             count++;
         }
 
-        return res.json({
+        return res.status(200).json({
             city: cityData.name,
             country: cityData.country,
             forecast: Array.isArray(forecast) ? forecast : []
