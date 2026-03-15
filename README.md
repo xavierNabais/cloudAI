@@ -44,7 +44,19 @@ npm run preview
 
 ### Variáveis de Ambiente
 
-Crie um arquivo `.env.local` (ou configure no Vercel):
+**IMPORTANTE:** Configure a variável de ambiente no Vercel:
+
+1. Acesse o [Vercel Dashboard](https://vercel.com/dashboard)
+2. Selecione o projeto
+3. Vá em **Settings → Environment Variables**
+4. Adicione:
+   - **Name:** `OPENWEATHER_API_KEY`
+   - **Value:** sua chave do OpenWeatherMap
+   - **Environment:** Production, Preview e Development
+5. Clique em **Save**
+6. Faça um novo deploy
+
+Para desenvolvimento local, crie um arquivo `.env.local`:
 
 ```
 OPENWEATHER_API_KEY=sua_chave_aqui
