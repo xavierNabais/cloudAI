@@ -91,20 +91,29 @@ export default async function handler(req, res) {
             const avgVisibility = items.reduce((sum, i) => sum + (i.visibility || 10000), 0) / items.length / 1000;
             const avgHumidity = items.reduce((sum, i) => sum + (i.main?.humidity || 0), 0) / items.length;
 
-            // Calcular horários do sol (simplificado)
+            // Calcular horários do sol
             const dateObj = new Date(date);
             const sunrise = calculateSunTime(lat, lon, dateObj, true);
             const sunset = calculateSunTime(lat, lon, dateObj, false);
 
-            // Blue Hour e Golden Hour
-            const blueHourMorningStart = new Date(sunrise.getTime() - 90 * 60 * 1000);
-            const blueHourMorningEnd = new Date(sunrise.getTime() - 60 * 60 * 1000);
-            const goldenHourMorningStart = new Date(sunrise.getTime() - 60 * 60 * 1000);
-            const goldenHourMorningEnd = sunrise;
-            const goldenHourEveningStart = new Date(sunset.getTime() - 30 * 60 * 1000);
-            const goldenHourEveningEnd = new Date(sunset.getTime() + 30 * 60 * 1000);
-            const blueHourEveningStart = new Date(sunset.getTime() + 30 * 60 * 1000);
-            const blueHourEveningEnd = new Date(sunset.getTime() + 60 * 60 * 1000);
+            // Calcular azimute e elevação do sol
+            const sunriseAzimuth = calculateSunAzimuth(lat, lon, sunrise);
+            const sunsetAzimuth = calculateSunAzimuth(lat, lon, sunset);
+            const sunriseElevation = calculateSunElevation(lat, lon, sunrise);
+            const sunsetElevation = calculateSunElevation(lat, lon, sunset);
+
+            // Blue Hour e Golden Hour - ordem correta sem sobreposição
+            // Manhã: Blue Hour antes, Golden Hour depois (termina no nascer)
+            const blueHourMorningStart = new Date(sunrise.getTime() - 90 * 60 * 1000); // 1h30 antes
+            const blueHourMorningEnd = new Date(sunrise.getTime() - 30 * 60 * 1000); // 30min antes
+            const goldenHourMorningStart = new Date(sunrise.getTime() - 60 * 60 * 1000); // 1h antes
+            const goldenHourMorningEnd = sunrise; // Termina no nascer
+
+            // Tarde: Golden Hour antes (começa antes do pôr), Blue Hour depois (começa no pôr)
+            const goldenHourEveningStart = new Date(sunset.getTime() - 60 * 60 * 1000); // 1h antes
+            const goldenHourEveningEnd = sunset; // Termina no pôr
+            const blueHourEveningStart = sunset; // Começa no pôr
+            const blueHourEveningEnd = new Date(sunset.getTime() + 30 * 60 * 1000); // 30min depois
 
             // Avaliar condições
             let photographyStatus = 'razoavel';
@@ -124,7 +133,10 @@ export default async function handler(req, res) {
                 cloud_details: {
                     type: avgClouds < 20 ? 'limpo' : avgClouds < 50 ? 'cumulus' : 'stratus',
                     height: avgClouds < 30 ? 'alta' : avgClouds < 70 ? 'média' : 'baixa',
-                    description: avgClouds < 20 ? 'Céu limpo' : 'Nuvens variadas'
+                    description: avgClouds < 20 ? 'Céu limpo' : 'Nuvens variadas',
+                    coverage_percent: Math.round(avgClouds),
+                    distribution: avgClouds < 20 ? 'dispersas' : avgClouds < 50 ? 'parcial' : 'abundante',
+                    movement_prediction: avgWindSpeed < 5 ? 'lento' : avgWindSpeed < 15 ? 'moderado' : 'rápido'
                 },
                 wind_speed: Math.round(avgWindSpeed * 3.6 * 10) / 10,
                 wind_direction: items[0].wind?.deg ? {
@@ -158,12 +170,12 @@ export default async function handler(req, res) {
                             end: formatTime(blueHourEveningEnd)
                         }
                     },
-                    sunrise_azimuth: 0,
-                    sunset_azimuth: 0,
-                    sunrise_elevation: 0,
-                    sunset_elevation: 0,
-                    sunrise_direction: 'E',
-                    sunset_direction: 'W'
+                    sunrise_azimuth: Math.round(sunriseAzimuth),
+                    sunset_azimuth: Math.round(sunsetAzimuth),
+                    sunrise_elevation: Math.round(sunriseElevation * 10) / 10,
+                    sunset_elevation: Math.round(sunsetElevation * 10) / 10,
+                    sunrise_direction: degreesToCardinal(sunriseAzimuth),
+                    sunset_direction: degreesToCardinal(sunsetAzimuth)
                 },
                 atmospheric: {
                     humidity: Math.round(avgHumidity),
@@ -178,11 +190,18 @@ export default async function handler(req, res) {
                     }
                 },
                 water_conditions: {
-                    mirror_quality: avgWindSpeed < 3 ? 'excelente' : avgWindSpeed < 5 ? 'muito boa' : 'boa',
-                    mirror_description: avgWindSpeed < 3 ? 'Água calma - perfeita para espelhagem' : 'Condições moderadas',
+                    mirror_quality: avgWindSpeed < 2 ? 'excelente' : avgWindSpeed < 5 ? 'muito boa' : avgWindSpeed < 10 ? 'boa' : avgWindSpeed < 15 ? 'razoável' : 'má',
+                    mirror_description: avgWindSpeed < 2 ? 'Água calma - perfeita para espelhagem' : 
+                                     avgWindSpeed < 5 ? 'Condições muito boas para espelhagem' :
+                                     avgWindSpeed < 10 ? 'Condições moderadas - espelhagem possível' :
+                                     avgWindSpeed < 15 ? 'Vento moderado - espelhagem limitada' :
+                                     'Vento forte - espelhagem difícil',
                     wind_for_water: { speed: Math.round(avgWindSpeed * 3.6) },
                     water_fog_risk: avgHumidity > 85 ? 'alto' : 'baixo',
-                    recommendation: avgWindSpeed < 3 ? 'Ideal para fotos de espelhagem' : 'Bom para fotografia'
+                    recommendation: avgWindSpeed < 2 ? 'Ideal para fotos de espelhagem' : 
+                                  avgWindSpeed < 5 ? 'Bom para espelhagem' :
+                                  avgWindSpeed < 10 ? 'Espelhagem possível com paciência' :
+                                  'Espelhagem difícil - considere outras composições'
                 },
                 photometry: {
                     light_scattering: {
@@ -203,25 +222,37 @@ export default async function handler(req, res) {
                 equipment_suggestions: {
                     lens: {
                         primary: {
-                            type: avgClouds >= 20 && avgClouds <= 50 ? 'grande angular' : 'normal',
-                            reason: 'Adequado para as condições',
-                            priority: 'média'
+                            type: avgClouds < 30 ? 'grande angular' : avgClouds >= 20 && avgClouds <= 50 ? 'grande angular' : 'normal',
+                            reason: avgClouds < 30 ? 'Céu limpo - ideal para paisagens amplas' : 
+                                   avgClouds >= 20 && avgClouds <= 50 ? 'Nuvens interessantes - grande angular captura mais céu' :
+                                   'Condições variadas',
+                            priority: 'alta'
                         }
                     },
                     tripod: {
                         recommended: avgWindSpeed < 3 || avgWindSpeed > 10,
-                        priority: avgWindSpeed < 3 ? 'alta' : 'média',
-                        reasons: avgWindSpeed < 3 ? ['Vento calmo permite longas exposições'] : [],
-                        note: avgWindSpeed < 3 ? 'Tripé altamente recomendado' : 'Tripé opcional'
+                        priority: avgWindSpeed < 3 ? 'alta' : avgWindSpeed > 10 ? 'média' : 'baixa',
+                        reasons: avgWindSpeed < 3 ? ['Vento calmo permite longas exposições'] : 
+                                avgWindSpeed > 10 ? ['Vento forte - tripé ajuda estabilizar'] : [],
+                        note: avgWindSpeed < 3 ? 'Tripé altamente recomendado' : 
+                             avgWindSpeed > 10 ? 'Tripé recomendado para estabilidade' :
+                             'Tripé opcional'
                     },
                     filters: {
                         primary: avgClouds < 20 ? {
                             type: 'ND (Neutral Density)',
-                            reason: 'Céu muito brilhante',
+                            reason: 'Céu muito brilhante - reduz exposição',
                             priority: 'alta'
+                        } : avgWindSpeed < 5 && avgClouds >= 20 ? {
+                            type: 'Polarizador',
+                            reason: 'Melhora contraste e reduz reflexos na água',
+                            priority: 'média'
                         } : null,
-                        alternatives: [],
-                        note: 'Filtros opcionais'
+                        alternatives: avgClouds < 20 ? ['Polarizador para reduzir brilho'] : 
+                                     avgWindSpeed < 5 ? ['ND gradiente para equilibrar céu e terra'] : [],
+                        note: avgClouds < 20 ? 'ND recomendado, polarizador útil' :
+                             avgWindSpeed < 5 ? 'Polarizador recomendado para água' :
+                             'Filtros opcionais'
                     }
                 },
                 photography_status: photographyStatus,
