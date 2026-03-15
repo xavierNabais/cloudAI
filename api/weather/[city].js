@@ -1,11 +1,16 @@
 // Vercel Serverless Function para previsão do tempo
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
+    // Suportar tanto GET quanto POST
+    const method = req.method || 'GET';
+    
+    if (method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { city } = req.query;
-    const days = Math.min(Math.max(parseInt(req.query.days) || 5, 1), 7);
+    // Extrair parâmetros da URL
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const city = url.pathname.split('/').pop() || url.searchParams.get('city');
+    const days = Math.min(Math.max(parseInt(url.searchParams.get('days')) || 5, 1), 7);
 
     if (!city) {
         return res.status(400).json({ error: 'City parameter is required' });
