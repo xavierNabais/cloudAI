@@ -103,9 +103,9 @@ export default async function handler(req, res) {
             const sunsetElevation = calculateSunElevation(lat, lon, sunset);
 
             // Blue Hour e Golden Hour - ordem correta sem sobreposição
-            // Manhã: Blue Hour antes, Golden Hour depois (termina no nascer)
+            // Manhã: Blue Hour antes, Golden Hour depois; Blue Hour termina poucos minutos antes do nascer
             const blueHourMorningStart = new Date(sunrise.getTime() - 90 * 60 * 1000); // 1h30 antes
-            const blueHourMorningEnd = new Date(sunrise.getTime() - 30 * 60 * 1000); // 30min antes
+            const blueHourMorningEnd = new Date(sunrise.getTime() - 8 * 60 * 1000);   // 8 min antes do nascer
             const goldenHourMorningStart = new Date(sunrise.getTime() - 60 * 60 * 1000); // 1h antes
             const goldenHourMorningEnd = sunrise; // Termina no nascer
 
@@ -135,14 +135,23 @@ export default async function handler(req, res) {
                     height: avgClouds < 30 ? 'alta' : avgClouds < 70 ? 'média' : 'baixa',
                     description: avgClouds < 20 ? 'Céu limpo' : 'Nuvens variadas',
                     coverage_percent: Math.round(avgClouds),
-                    distribution: avgClouds < 20 ? 'dispersas' : avgClouds < 50 ? 'parcial' : 'abundante',
+                    distribution: {
+                        pattern: avgClouds < 20 ? 'dispersas' : avgClouds < 50 ? 'parcial' : 'abundante',
+                        description: avgClouds < 20 ? 'Céu limpo - ideal para sol direto' : avgClouds < 50 ? 'Nuvens interessantes para pôr/nascer' : 'Céu carregado - foco em primeiro plano',
+                        horizon_concentration: avgClouds < 20 ? 'muito baixa' : avgClouds < 40 ? 'baixa' : avgClouds < 60 ? 'média' : 'alta'
+                    },
                     concentration: avgClouds < 20 ? 'muito baixa' : avgClouds < 40 ? 'baixa' : avgClouds < 60 ? 'média' : avgClouds < 80 ? 'alta' : 'muito alta',
+                    concentration_photo_tip: avgClouds < 20 ? 'Céu limpo - concentração mínima; bom para sol limpo e sombras definidas' : avgClouds < 40 ? 'Concentração baixa - nuvens isoladas ideais para pôr/nascer do sol' : avgClouds < 60 ? 'Concentração média - bom equilíbrio para drama no céu' : 'Concentração alta - priorize primeiro plano ou detalhes',
                     movement_prediction: avgWindSpeed < 5 ? 'lento' : avgWindSpeed < 15 ? 'moderado' : 'rápido',
                     movement_speed: Math.round(avgWindSpeed * 3.6),
                     movement_direction: items[0].wind?.deg ? degreesToCardinal(items[0].wind.deg) : 'N/A',
                     movement_description: avgWindSpeed < 5 ? 'Nuvens quase estáticas - ideal para composições longas' : 
                                          avgWindSpeed < 15 ? 'Movimento moderado - bom para timelapse' : 
-                                         'Movimento rápido - nuvens dramáticas, timelapse interessante'
+                                         'Movimento rápido - nuvens dramáticas, timelapse interessante',
+                    movement: {
+                        speed: `${Math.round(avgWindSpeed * 3.6)} km/h`,
+                        description: avgWindSpeed < 5 ? 'Nuvens quase estáticas - ideal para composições longas' : avgWindSpeed < 15 ? 'Movimento moderado - bom para timelapse' : 'Movimento rápido - nuvens dramáticas, timelapse interessante'
+                    }
                 },
                 wind_speed: Math.round(avgWindSpeed * 3.6 * 10) / 10,
                 wind_direction: items[0].wind?.deg ? {
@@ -196,17 +205,20 @@ export default async function handler(req, res) {
                     }
                 },
                 water_conditions: {
-                    mirror_quality: avgWindSpeed < 2 ? 'excelente' : avgWindSpeed < 5 ? 'muito boa' : avgWindSpeed < 10 ? 'boa' : avgWindSpeed < 15 ? 'razoável' : 'má',
+                    // Espelhagem: 23 km/h ≈ 6.4 m/s → razoável/limitada; tier fino para fotografia
+                    mirror_quality: avgWindSpeed < 2 ? 'excelente' : avgWindSpeed < 4 ? 'muito boa' : avgWindSpeed < 6 ? 'boa' : avgWindSpeed < 8 ? 'razoável' : avgWindSpeed < 12 ? 'má' : 'muito má',
                     mirror_description: avgWindSpeed < 2 ? 'Água calma - perfeita para espelhagem' : 
-                                     avgWindSpeed < 5 ? 'Condições muito boas para espelhagem' :
-                                     avgWindSpeed < 10 ? 'Condições moderadas - espelhagem possível' :
-                                     avgWindSpeed < 15 ? 'Vento moderado - espelhagem limitada' :
-                                     'Vento forte - espelhagem difícil',
+                                     avgWindSpeed < 4 ? 'Condições muito boas para espelhagem' :
+                                     avgWindSpeed < 6 ? 'Condições moderadas - espelhagem possível' :
+                                     avgWindSpeed < 8 ? 'Vento 20-30 km/h - espelhagem limitada, ondas pequenas' :
+                                     avgWindSpeed < 12 ? 'Vento moderado - espelhagem difícil' :
+                                     'Vento forte - espelhagem impraticável',
                     wind_for_water: { speed: Math.round(avgWindSpeed * 3.6) },
                     water_fog_risk: avgHumidity > 85 ? 'alto' : 'baixo',
                     recommendation: avgWindSpeed < 2 ? 'Ideal para fotos de espelhagem' : 
-                                  avgWindSpeed < 5 ? 'Bom para espelhagem' :
-                                  avgWindSpeed < 10 ? 'Espelhagem possível com paciência' :
+                                  avgWindSpeed < 4 ? 'Bom para espelhagem' :
+                                  avgWindSpeed < 6 ? 'Espelhagem possível com paciência' :
+                                  avgWindSpeed < 8 ? 'Espelhagem limitada (ex.: ~23 km/h) - prefira ângulos baixos ou momentos de menor vento' :
                                   'Espelhagem difícil - considere outras composições'
                 },
                 photometry: {
@@ -276,11 +288,17 @@ export default async function handler(req, res) {
                             type: 'Polarizador',
                             reason: 'Melhora contraste e reduz reflexos na água',
                             priority: 'média'
+                        } : avgWindSpeed >= 6 && avgWindSpeed < 10 ? {
+                            type: 'ND (3–6 stops) ou polarizador',
+                            reason: 'Vento moderado (20–35 km/h) - ND para suavizar água, polarizador para contraste',
+                            priority: 'média'
                         } : null,
-                        alternatives: avgClouds < 20 ? ['Polarizador para reduzir brilho'] : 
-                                     avgWindSpeed < 5 ? ['ND gradiente para equilibrar céu e terra'] : [],
+                        alternatives: avgClouds < 20 ? ['Polarizador para reduzir brilho', 'ND gradiente para nascer/pôr do sol'] : 
+                                     avgWindSpeed < 5 ? ['ND gradiente para equilibrar céu e terra', 'Polarizador para espelhagem'] :
+                                     avgWindSpeed < 10 ? ['ND para longa exposição na água', 'Polarizador para cortar reflexos'] : [],
                         note: avgClouds < 20 ? 'ND recomendado, polarizador útil' :
                              avgWindSpeed < 5 ? 'Polarizador recomendado para água' :
+                             avgWindSpeed < 10 ? 'ND ou polarizador conforme tipo de plano (água vs. céu)' :
                              'Filtros opcionais'
                     },
                     camera_settings: {
@@ -393,33 +411,35 @@ function calculateSunTime(lat, lon, date, isSunrise) {
     const minutes = Math.floor((time - hours) * 60);
     
     const result = new Date(date);
-    result.setHours(hours, minutes, 0, 0);
+    // Usar UTC para ser consistente em qualquer servidor (azimute/elevação usam getUTCHours)
+    result.setUTCHours(hours, minutes, 0, 0);
     return result;
 }
 
 function formatTime(date) {
-    return date.toTimeString().slice(0, 5);
+    const h = date.getUTCHours();
+    const m = date.getUTCMinutes();
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function calculateSunAzimuth(lat, lon, date) {
     const latRad = (lat * Math.PI) / 180;
-    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+    const dayOfYear = Math.floor((date.getTime() - new Date(Date.UTC(date.getUTCFullYear(), 0, 0)).getTime()) / 86400000);
     const declination = 23.45 * Math.sin((360 * (284 + dayOfYear) / 365) * Math.PI / 180);
     const declinationRad = (declination * Math.PI) / 180;
     
-    // Hora solar local
-    const hours = date.getHours() + date.getMinutes() / 60;
-    const solarTime = hours + (lon / 15);
+    // Hora solar local: usar UTC para ser independente do fuso do servidor
+    const hoursUTC = date.getUTCHours() + date.getUTCMinutes() / 60;
+    const solarTime = hoursUTC + (lon / 15);
     const hourAngle = (solarTime - 12) * 15;
     const hourAngleRad = (hourAngle * Math.PI) / 180;
     
-    // Calcular azimute
+    // Azimute (fórmula solar): resultado é referido a Sul; +180° para Norte (0°=N, 90°=E)
     const azimuthRad = Math.atan2(
         Math.sin(hourAngleRad),
         Math.cos(hourAngleRad) * Math.sin(latRad) - Math.tan(declinationRad) * Math.cos(latRad)
     );
-    
-    let azimuth = (azimuthRad * 180) / Math.PI;
+    let azimuth = (azimuthRad * 180) / Math.PI + 180;
     azimuth = (azimuth + 360) % 360;
     
     return azimuth;
@@ -427,25 +447,23 @@ function calculateSunAzimuth(lat, lon, date) {
 
 function calculateSunElevation(lat, lon, date) {
     const latRad = (lat * Math.PI) / 180;
-    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+    const dayOfYear = Math.floor((date.getTime() - new Date(Date.UTC(date.getUTCFullYear(), 0, 0)).getTime()) / 86400000);
     const declination = 23.45 * Math.sin((360 * (284 + dayOfYear) / 365) * Math.PI / 180);
     const declinationRad = (declination * Math.PI) / 180;
     
-    // Hora solar local
-    const hours = date.getHours() + date.getMinutes() / 60;
-    const solarTime = hours + (lon / 15);
+    // Hora solar local: usar UTC para ser independente do fuso do servidor
+    const hoursUTC = date.getUTCHours() + date.getUTCMinutes() / 60;
+    const solarTime = hoursUTC + (lon / 15);
     const hourAngle = (solarTime - 12) * 15;
     const hourAngleRad = (hourAngle * Math.PI) / 180;
     
-    // Calcular elevação
     const elevationRad = Math.asin(
         Math.sin(latRad) * Math.sin(declinationRad) +
         Math.cos(latRad) * Math.cos(declinationRad) * Math.cos(hourAngleRad)
     );
-    
     const elevation = (elevationRad * 180) / Math.PI;
     
-    // Ajuste para refração atmosférica (~0.83°)
+    // Refração atmosférica no horizonte ~0,83° (sol geometricamente -0,83° aparece a 0°)
     return elevation + 0.83;
 }
 

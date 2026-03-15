@@ -228,6 +228,11 @@ function WeatherCard({ data }) {
                                             Concentração: {data.cloud_details.distribution.horizon_concentration}
                                         </div>
                                     )}
+                                    {data.cloud_details.concentration_photo_tip && (
+                                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                                            💡 {data.cloud_details.concentration_photo_tip}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             
