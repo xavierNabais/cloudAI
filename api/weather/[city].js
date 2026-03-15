@@ -35,10 +35,17 @@ export default async function handler(req, res) {
         const forecastResponse = await fetch(
             `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&cnt=${Math.min(days * 8, 40)}&units=metric&lang=pt&appid=${apiKey}`
         );
+        
+        if (!forecastResponse.ok) {
+            const errorData = await forecastResponse.json().catch(() => ({}));
+            throw new Error(errorData.message || `Erro HTTP ${forecastResponse.status} ao obter previsão`);
+        }
+        
         const forecastData = await forecastResponse.json();
 
-        if (!forecastData.list) {
-            throw new Error('Erro ao obter previsão do tempo');
+        if (!forecastData || !forecastData.list || !Array.isArray(forecastData.list)) {
+            console.error('Resposta inválida da API:', forecastData);
+            throw new Error('Resposta da API inválida: lista de previsões não encontrada');
         }
 
         // Processar dados (versão simplificada)
@@ -53,8 +60,15 @@ export default async function handler(req, res) {
 
         const forecast = [];
         let count = 0;
-        for (const [date, items] of Object.entries(dailyData)) {
+        const sortedDates = Object.keys(dailyData).sort();
+        
+        for (const date of sortedDates) {
             if (count >= days) break;
+            const items = dailyData[date];
+            
+            if (!items || !Array.isArray(items) || items.length === 0) {
+                continue;
+            }
 
             // Calcular médias
             const clouds = items.map(i => i.clouds?.all || 0);
@@ -91,7 +105,7 @@ export default async function handler(req, res) {
 
             forecast.push({
                 date,
-                description: items[0].weather[0].description,
+                description: items[0]?.weather?.[0]?.description || 'Sem descrição',
                 temperature: Math.round(avgTemp * 10) / 10,
                 clouds: Math.round(avgClouds),
                 cloud_details: {
@@ -211,9 +225,11 @@ export default async function handler(req, res) {
         });
     } catch (error) {
         console.error('Erro ao obter previsão:', error);
+        console.error('Stack:', error.stack);
         return res.status(500).json({ 
             error: true,
-            message: error.message || 'Erro ao obter previsão do tempo'
+            message: error.message || 'Erro ao obter previsão do tempo',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 }

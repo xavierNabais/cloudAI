@@ -17,15 +17,38 @@ function App() {
             const response = await axios.get(`/api/weather/${encodeURIComponent(cityName)}`, {
                 params: { days: forecastDays }
             });
-            console.log('Resposta da API:', response.data);
-            if (response.data && response.data.forecast && Array.isArray(response.data.forecast)) {
-                setWeatherData(response.data);
-            } else {
-                throw new Error('Resposta da API inválida: forecast não encontrado ou não é um array');
+            console.log('Resposta completa da API:', response);
+            console.log('Dados da resposta:', response.data);
+            
+            // Verificar se há erro na resposta
+            if (response.data?.error) {
+                throw new Error(response.data.message || 'Erro na resposta da API');
             }
+            
+            // Verificar estrutura da resposta
+            if (!response.data) {
+                throw new Error('Resposta da API vazia');
+            }
+            
+            if (!response.data.forecast) {
+                console.error('Resposta sem forecast:', response.data);
+                throw new Error('Resposta da API inválida: forecast não encontrado');
+            }
+            
+            if (!Array.isArray(response.data.forecast)) {
+                console.error('Forecast não é array:', typeof response.data.forecast, response.data.forecast);
+                throw new Error('Resposta da API inválida: forecast não é um array');
+            }
+            
+            setWeatherData(response.data);
         } catch (err) {
             console.error('Erro ao buscar dados:', err);
-            setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Erro ao buscar dados meteorológicos');
+            console.error('Detalhes do erro:', err.response?.data);
+            const errorMessage = err.response?.data?.message || 
+                                err.response?.data?.error || 
+                                err.message || 
+                                'Erro ao buscar dados meteorológicos';
+            setError(errorMessage);
             setWeatherData(null);
         } finally {
             setLoading(false);
