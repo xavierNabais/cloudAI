@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "curl -sS https://getcomposer.org/installer | php && php composer.phar install --no-dev --optimize-autoloader --no-interaction && npm install && npm run build && mkdir -p dist && cp -r public dist/public && cp -r app bootstrap config database resources routes storage vendor dist/ 2>/dev/null || true && cp artisan composer.json composer.lock dist/ 2>/dev/null || true && touch dist/.vercel",
+  "buildCommand": "chmod +x build.sh && ./build.sh",
   "installCommand": "",
   "outputDirectory": "dist",
   "framework": null,
