@@ -1,7 +1,29 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
+
+function copyDir(src, dest) {
+  if (!existsSync(src)) return;
+  
+  if (!existsSync(dest)) {
+    mkdirSync(dest, { recursive: true });
+  }
+  
+  const entries = readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
 
 export default defineConfig({
   plugins: [
@@ -14,16 +36,11 @@ export default defineConfig({
         const apiDest = join(process.cwd(), 'dist', 'api');
         
         if (existsSync(apiSource)) {
-          const { execSync } = require('child_process');
           try {
-            execSync(`xcopy /E /I /Y "${apiSource}" "${apiDest}"`, { shell: true });
+            copyDir(apiSource, apiDest);
+            console.log('Pasta api copiada com sucesso para dist/');
           } catch (e) {
-            // Fallback para sistemas Unix
-            try {
-              execSync(`cp -r "${apiSource}" "${apiDest}"`, { shell: true });
-            } catch (e2) {
-              console.warn('Não foi possível copiar a pasta api:', e2);
-            }
+            console.warn('Erro ao copiar pasta api:', e);
           }
         }
       }
