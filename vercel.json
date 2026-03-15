@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "chmod +x build.sh && ./build.sh",
+  "buildCommand": "bash build.sh",
   "installCommand": "",
   "outputDirectory": "dist",
   "framework": null,

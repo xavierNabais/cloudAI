@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "build:vercel": "vite build",
+        "build:vercel": "vite build && mkdir -p dist && cp -r public dist/public && cp -r app bootstrap config database resources routes storage vendor dist/ 2>/dev/null || true && cp artisan composer.json composer.lock dist/ 2>/dev/null || true",
         "dev": "vite"
     },
     "devDependencies": {
