@@ -30,7 +30,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Laravel specific (keeping for now, but not used)
-storage/*.key
-.phpunit.result.cache
-bootstrap/cache/*.php
+# Vercel
+.vercel
