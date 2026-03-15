@@ -136,7 +136,13 @@ export default async function handler(req, res) {
                     description: avgClouds < 20 ? 'Céu limpo' : 'Nuvens variadas',
                     coverage_percent: Math.round(avgClouds),
                     distribution: avgClouds < 20 ? 'dispersas' : avgClouds < 50 ? 'parcial' : 'abundante',
-                    movement_prediction: avgWindSpeed < 5 ? 'lento' : avgWindSpeed < 15 ? 'moderado' : 'rápido'
+                    concentration: avgClouds < 20 ? 'muito baixa' : avgClouds < 40 ? 'baixa' : avgClouds < 60 ? 'média' : avgClouds < 80 ? 'alta' : 'muito alta',
+                    movement_prediction: avgWindSpeed < 5 ? 'lento' : avgWindSpeed < 15 ? 'moderado' : 'rápido',
+                    movement_speed: Math.round(avgWindSpeed * 3.6),
+                    movement_direction: items[0].wind?.deg ? degreesToCardinal(items[0].wind.deg) : 'N/A',
+                    movement_description: avgWindSpeed < 5 ? 'Nuvens quase estáticas - ideal para composições longas' : 
+                                         avgWindSpeed < 15 ? 'Movimento moderado - bom para timelapse' : 
+                                         'Movimento rápido - nuvens dramáticas, timelapse interessante'
                 },
                 wind_speed: Math.round(avgWindSpeed * 3.6 * 10) / 10,
                 wind_direction: items[0].wind?.deg ? {
@@ -222,12 +228,35 @@ export default async function handler(req, res) {
                 equipment_suggestions: {
                     lens: {
                         primary: {
-                            type: avgClouds < 30 ? 'grande angular' : avgClouds >= 20 && avgClouds <= 50 ? 'grande angular' : 'normal',
+                            type: avgClouds < 30 ? 'grande angular (14-24mm)' : avgClouds >= 20 && avgClouds <= 50 ? 'grande angular (16-35mm)' : 'normal (24-70mm)',
                             reason: avgClouds < 30 ? 'Céu limpo - ideal para paisagens amplas' : 
                                    avgClouds >= 20 && avgClouds <= 50 ? 'Nuvens interessantes - grande angular captura mais céu' :
                                    'Condições variadas',
                             priority: 'alta'
-                        }
+                        },
+                        alternatives: avgClouds >= 20 && avgClouds <= 50 ? [
+                            'Teleobjetiva (70-200mm) para detalhes de nuvens',
+                            'Ultra grande angular (10-14mm) para vistas dramáticas'
+                        ] : avgClouds < 20 ? [
+                            'Teleobjetiva (100-400mm) para comprimir elementos distantes',
+                            'Normal (50mm) para composições equilibradas'
+                        ] : [
+                            'Normal (24-70mm) versátil',
+                            'Teleobjetiva (70-200mm) para isolamento de elementos'
+                        ],
+                        framing_tips: avgClouds < 30 ? [
+                            'Use regra dos terços - coloque horizonte no terço inferior',
+                            'Inclua elementos em primeiro plano para profundidade',
+                            'Aproveite o céu limpo para composições minimalistas'
+                        ] : avgClouds >= 20 && avgClouds <= 50 ? [
+                            'Céu dramático - dê mais espaço ao céu (2/3 da imagem)',
+                            'Nuvens no horizonte criam interesse - enquadre baixo',
+                            'Use nuvens como elemento de composição'
+                        ] : [
+                            'Céu nublado - foque em elementos terrestres',
+                            'Use nuvens baixas para criar atmosfera',
+                            'Considere composições verticais para capturar altura das nuvens'
+                        ]
                     },
                     tripod: {
                         recommended: avgWindSpeed < 3 || avgWindSpeed > 10,
@@ -253,6 +282,69 @@ export default async function handler(req, res) {
                         note: avgClouds < 20 ? 'ND recomendado, polarizador útil' :
                              avgWindSpeed < 5 ? 'Polarizador recomendado para água' :
                              'Filtros opcionais'
+                    },
+                    camera_settings: {
+                        iso: avgClouds < 20 ? {
+                            base: 100,
+                            range: '100-400',
+                            reason: 'Céu claro - ISO baixo para máxima qualidade',
+                            note: 'Use ISO 100-200 para melhor qualidade, aumente apenas se necessário'
+                        } : avgClouds < 50 ? {
+                            base: 200,
+                            range: '200-800',
+                            reason: 'Condições variadas - ISO moderado',
+                            note: 'ISO 200-400 ideal, aumente para 800 se houver movimento'
+                        } : {
+                            base: 400,
+                            range: '400-1600',
+                            reason: 'Céu nublado - ISO mais alto para compensar luz',
+                            note: 'ISO 400-800 base, até 1600 se necessário para velocidade'
+                        },
+                        aperture: avgClouds < 20 ? {
+                            recommended: 'f/8 - f/11',
+                            reason: 'Máxima nitidez e profundidade de campo',
+                            alternatives: ['f/5.6 para isolamento', 'f/16 para máxima profundidade'],
+                            note: 'f/8 é o ponto ideal para grande angular'
+                        } : avgClouds >= 20 && avgClouds <= 50 ? {
+                            recommended: 'f/8 - f/11',
+                            reason: 'Equilíbrio entre nitidez e exposição',
+                            alternatives: ['f/5.6 para mais luz', 'f/13 para mais profundidade'],
+                            note: 'f/8-11 ideal para paisagens com nuvens'
+                        } : {
+                            recommended: 'f/5.6 - f/8',
+                            reason: 'Mais luz para compensar céu nublado',
+                            alternatives: ['f/4 para mais luz', 'f/11 para mais profundidade'],
+                            note: 'Ajuste conforme necessidade de luz'
+                        },
+                        shutter_speed: avgWindSpeed < 2 ? {
+                            recommended: '1/30s - 30s',
+                            reason: 'Vento calmo - longas exposições possíveis',
+                            long_exposure: '30s - 5min para água suave',
+                            normal: '1/30s - 1/2s para movimento suave',
+                            fast: '1/125s+ para congelar movimento',
+                            note: 'Use tripé para exposições > 1/30s'
+                        } : avgWindSpeed < 5 ? {
+                            recommended: '1/60s - 2s',
+                            reason: 'Vento leve - exposições moderadas',
+                            long_exposure: '2s - 30s possível com tripé estável',
+                            normal: '1/60s - 1/4s para movimento controlado',
+                            fast: '1/250s+ para congelar',
+                            note: 'Tripé recomendado para exposições > 1/60s'
+                        } : avgWindSpeed < 15 ? {
+                            recommended: '1/125s - 1/2s',
+                            reason: 'Vento moderado - velocidades mais altas',
+                            long_exposure: '1/2s - 4s máximo',
+                            normal: '1/125s - 1/30s',
+                            fast: '1/500s+ para congelar movimento',
+                            note: 'Evite exposições muito longas com vento'
+                        } : {
+                            recommended: '1/250s+',
+                            reason: 'Vento forte - velocidades altas necessárias',
+                            long_exposure: 'Não recomendado',
+                            normal: '1/250s - 1/500s',
+                            fast: '1/500s+ para congelar',
+                            note: 'Use velocidades altas para evitar movimento'
+                        }
                     }
                 },
                 photography_status: photographyStatus,
