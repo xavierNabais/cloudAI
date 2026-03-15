@@ -1,5 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-
+// Vercel Serverless Function para busca de cidades
 const PORTUGUESE_CITIES = [
     'Lisboa', 'Porto', 'Braga', 'Coimbra', 'Faro', 'Évora', 'Aveiro', 'Setúbal',
     'Viseu', 'Leiria', 'Funchal', 'Ponta Delgada', 'Vila Nova de Gaia', 'Guimarães',
@@ -11,15 +10,12 @@ const PORTUGUESE_CITIES = [
     'Olhão', 'Penafiel', 'Portimão', 'Quarteira', 'Tavira', 'Tomar', 'Torres Vedras'
 ];
 
-export default async function handler(
-    req: NextApiRequest,
-    res: NextApiResponse
-) {
+export default async function handler(req, res) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const query = req.query.q as string;
+    const query = req.query.q;
     
     if (!query || query.length < 2) {
         return res.json([]);
@@ -47,7 +43,7 @@ export default async function handler(
             }));
 
         // Busca na API se query tem 3+ caracteres
-        let apiResults: any[] = [];
+        let apiResults = [];
         if (query.length >= 3) {
             try {
                 const response1 = await fetch(
@@ -57,8 +53,8 @@ export default async function handler(
                 
                 if (Array.isArray(data1)) {
                     apiResults = data1
-                        .filter((city: any) => city.country === 'PT')
-                        .map((city: any) => ({
+                        .filter(city => city.country === 'PT')
+                        .map(city => ({
                             name: city.name,
                             country: 'PT',
                             state: city.state || null,
@@ -76,11 +72,11 @@ export default async function handler(
                     
                     if (Array.isArray(data2)) {
                         const additional = data2
-                            .filter((city: any) => 
+                            .filter(city => 
                                 city.country === 'PT' && 
                                 !apiResults.some(r => r.name === city.name)
                             )
-                            .map((city: any) => ({
+                            .map(city => ({
                                 name: city.name,
                                 country: 'PT',
                                 state: city.state || null,
@@ -113,7 +109,7 @@ export default async function handler(
         });
 
         return res.json(combined.slice(0, 10));
-    } catch (error: any) {
+    } catch (error) {
         console.error('Erro ao buscar cidades:', error);
         return res.status(500).json({ error: 'Erro ao buscar cidades' });
     }
