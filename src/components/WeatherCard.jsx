@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 
 function WeatherCard({ data }) {
+    if (!data) {
+        return null;
+    }
+
     const [expandedSections, setExpandedSections] = useState({
         sun: true,
         atmospheric: false,
@@ -47,12 +51,17 @@ function WeatherCard({ data }) {
     };
 
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-PT', { 
-            weekday: 'long', 
-            day: 'numeric', 
-            month: 'long' 
-        });
+        if (!dateString) return 'Data não disponível';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-PT', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long' 
+            });
+        } catch (e) {
+            return dateString;
+        }
     };
 
     return (
@@ -60,15 +69,15 @@ function WeatherCard({ data }) {
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {formatDate(data.date)}
+                        {formatDate(data?.date)}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {data.description}
+                        {data?.description || 'Sem descrição'}
                     </p>
                 </div>
-                <div className={`px-3 py-1 rounded-full border-2 ${getStatusColor(data.photography_status)}`}>
+                <div className={`px-3 py-1 rounded-full border-2 ${getStatusColor(data?.photography_status || 'razoavel')}`}>
                     <span className="text-sm font-semibold">
-                        {getStatusIcon(data.photography_status)} {data.photography_status.toUpperCase()}
+                        {getStatusIcon(data?.photography_status || 'razoavel')} {(data?.photography_status || 'razoavel').toUpperCase()}
                     </span>
                 </div>
             </div>
@@ -79,13 +88,13 @@ function WeatherCard({ data }) {
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600 dark:text-gray-400">🌡️ Temp.</span>
                         <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {data.temperature}°C
+                            {data?.temperature || 'N/A'}°C
                         </span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600 dark:text-gray-400">👁️ Visibilidade</span>
                         <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {data.visibility} km
+                            {data?.visibility || 'N/A'} km
                         </span>
                     </div>
                 </div>

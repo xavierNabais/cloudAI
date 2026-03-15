@@ -207,7 +207,7 @@ export default async function handler(req, res) {
         return res.json({
             city: cityData.name,
             country: cityData.country,
-            forecast
+            forecast: Array.isArray(forecast) ? forecast : []
         });
     } catch (error) {
         console.error('Erro ao obter previsão:', error);

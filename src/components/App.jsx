@@ -17,10 +17,15 @@ function App() {
             const response = await axios.get(`/api/weather/${encodeURIComponent(cityName)}`, {
                 params: { days: forecastDays }
             });
-            setWeatherData(response.data);
+            console.log('Resposta da API:', response.data);
+            if (response.data && response.data.forecast && Array.isArray(response.data.forecast)) {
+                setWeatherData(response.data);
+            } else {
+                throw new Error('Resposta da API inválida: forecast não encontrado ou não é um array');
+            }
         } catch (err) {
             console.error('Erro ao buscar dados:', err);
-            setError(err.response?.data?.message || err.message || 'Erro ao buscar dados meteorológicos');
+            setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Erro ao buscar dados meteorológicos');
             setWeatherData(null);
         } finally {
             setLoading(false);
@@ -70,11 +75,17 @@ function App() {
                     </div>
                 )}
 
-                {weatherData && !loading && (
+                {weatherData && !loading && weatherData.forecast && Array.isArray(weatherData.forecast) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {weatherData.forecast.map((day, index) => (
                             <WeatherCard key={index} data={day} />
                         ))}
+                    </div>
+                )}
+                
+                {!loading && !error && weatherData && (!weatherData.forecast || !Array.isArray(weatherData.forecast)) && (
+                    <div className="text-center py-12">
+                        <p className="text-gray-600 dark:text-gray-300">Nenhum dado de previsão disponível.</p>
                     </div>
                 )}
             </div>
