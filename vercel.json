@@ -4,12 +4,6 @@
   "installCommand": "",
   "outputDirectory": "dist",
   "framework": null,
-  "builds": [
-    {
-      "src": "dist/public/index.php",
-      "use": "@vercel/php"
-    }
-  ],
   "routes": [
     {
       "src": "/build/(.*)",
