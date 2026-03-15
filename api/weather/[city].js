@@ -309,6 +309,54 @@ function formatTime(date) {
     return date.toTimeString().slice(0, 5);
 }
 
+function calculateSunAzimuth(lat, lon, date) {
+    const latRad = (lat * Math.PI) / 180;
+    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+    const declination = 23.45 * Math.sin((360 * (284 + dayOfYear) / 365) * Math.PI / 180);
+    const declinationRad = (declination * Math.PI) / 180;
+    
+    // Hora solar local
+    const hours = date.getHours() + date.getMinutes() / 60;
+    const solarTime = hours + (lon / 15);
+    const hourAngle = (solarTime - 12) * 15;
+    const hourAngleRad = (hourAngle * Math.PI) / 180;
+    
+    // Calcular azimute
+    const azimuthRad = Math.atan2(
+        Math.sin(hourAngleRad),
+        Math.cos(hourAngleRad) * Math.sin(latRad) - Math.tan(declinationRad) * Math.cos(latRad)
+    );
+    
+    let azimuth = (azimuthRad * 180) / Math.PI;
+    azimuth = (azimuth + 360) % 360;
+    
+    return azimuth;
+}
+
+function calculateSunElevation(lat, lon, date) {
+    const latRad = (lat * Math.PI) / 180;
+    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+    const declination = 23.45 * Math.sin((360 * (284 + dayOfYear) / 365) * Math.PI / 180);
+    const declinationRad = (declination * Math.PI) / 180;
+    
+    // Hora solar local
+    const hours = date.getHours() + date.getMinutes() / 60;
+    const solarTime = hours + (lon / 15);
+    const hourAngle = (solarTime - 12) * 15;
+    const hourAngleRad = (hourAngle * Math.PI) / 180;
+    
+    // Calcular elevação
+    const elevationRad = Math.asin(
+        Math.sin(latRad) * Math.sin(declinationRad) +
+        Math.cos(latRad) * Math.cos(declinationRad) * Math.cos(hourAngleRad)
+    );
+    
+    const elevation = (elevationRad * 180) / Math.PI;
+    
+    // Ajuste para refração atmosférica (~0.83°)
+    return elevation + 0.83;
+}
+
 function degreesToCardinal(degrees) {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 
                       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
